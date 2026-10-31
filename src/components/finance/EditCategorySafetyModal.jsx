@@ -2,13 +2,11 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { HiX, HiPencil, HiArrowRight, HiShieldCheck, HiExclamationTriangle, HiCheck } from '../../utils/icons';
 import useFinanceStore from '../../stores/useFinanceStore';
-import useProductivityStore from '../../stores/useProductivityStore';
 import { exportData } from '../../utils/helpers';
 import { getCategoryIcon } from '../../utils/categories';
 
 export default function EditCategorySafetyModal({ originalCategory, newCategoryData, onClose, onConfirm }) {
   const financeStore = useFinanceStore();
-  const productivityStore = useProductivityStore();
   const [step, setStep] = useState(1);
   const [saveBackup, setSaveBackup] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -20,7 +18,7 @@ export default function EditCategorySafetyModal({ originalCategory, newCategoryD
   const handleFinalAction = async () => {
     setIsProcessing(true);
     if (saveBackup) {
-      await exportData(financeStore, productivityStore);
+      await exportData(financeStore);
     }
     financeStore.editCategory(originalCategory.id, newCategoryData);
     setIsProcessing(false);

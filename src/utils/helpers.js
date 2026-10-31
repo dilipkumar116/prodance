@@ -1,6 +1,6 @@
 import { getStoredDirectoryHandle } from './db';
 
-export const exportData = async (financeState, productivityState) => {
+export const exportData = async (financeState) => {
   const data = {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -8,10 +8,6 @@ export const exportData = async (financeState, productivityState) => {
       expenses: financeState.expenses,
       categories: financeState.categories,
     },
-    productivity: productivityState ? {
-      goals: productivityState.goals,
-      habits: productivityState.habits,
-    } : undefined,
   };
 
   const jsonStr = JSON.stringify(data, null, 2);

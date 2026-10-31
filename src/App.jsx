@@ -26,16 +26,13 @@ const lazyWithRetry = (componentImport) =>
 
 const FinanceScreen = lazyWithRetry(() => import('./components/finance/FinanceScreen'));
 const SettingsScreen = lazyWithRetry(() => import('./components/SettingsScreen'));
-const SMSScreen = lazyWithRetry(() => import('./components/sms/SMSScreen'));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('finance');
   const [financeResetKey, setFinanceResetKey] = useState(0);
-  const [smsResetKey, setSmsResetKey] = useState(0);
 
   useEffect(() => {
     const preloadOtherScreens = () => {
-      import('./components/sms/SMSScreen').catch(() => {});
       import('./components/SettingsScreen').catch(() => {});
     };
 
@@ -53,7 +50,6 @@ export default function App() {
   const handleTabChange = (tabId) => {
     if (activeTab === tabId) {
       if (tabId === 'finance') setFinanceResetKey((k) => k + 1);
-      if (tabId === 'sms') setSmsResetKey((k) => k + 1);
     }
     setActiveTab(tabId);
   };
@@ -70,13 +66,6 @@ export default function App() {
                 <motion.div key={`finance-${financeResetKey}`} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">
                   <ErrorBoundary>
                     <FinanceScreen />
-                  </ErrorBoundary>
-                </motion.div>
-              )}
-              {activeTab === 'sms' && (
-                <motion.div key={`sms-${smsResetKey}`} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">
-                  <ErrorBoundary>
-                    <SMSScreen />
                   </ErrorBoundary>
                 </motion.div>
               )}

@@ -147,40 +147,52 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
       <div className={`flex-1 ${!inline ? 'overflow-y-auto no-scrollbar pb-10' : ''}`}>
         {(inline ? initialView : viewMode) === 'list' ? (
           <div className="space-y-4">
-            {/* Timeline Filter & Total Spent Banner */}
-            <div className="mx-5 mt-5 p-4 rounded-2xl bg-gradient-to-br from-accent-green/10 via-surface/60 to-surface/30 border border-accent-green/20 relative">
-              {/* Decorative blur */}
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-accent-green/10 blur-2xl rounded-full pointer-events-none" />
+            {/* Timeline Filter & Total Spent Hero Banner */}
+            <div className="mx-5 mt-4 p-5 rounded-3xl bg-gradient-to-br from-card via-surface/60 to-surface/30 border border-white/10 shadow-card relative overflow-hidden group">
+              {/* Decorative ambient aura */}
+              <div className="absolute -top-10 -right-10 w-28 h-28 bg-accent-green/15 blur-2xl rounded-full pointer-events-none group-hover:bg-accent-green/20 transition-all duration-300" />
               
               <div className="flex items-start justify-between relative z-10">
-                <div>
-                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Total Spent</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
+                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                      Filtered Spend
+                    </p>
+                  </div>
                   <motion.p
                     key={totalFilteredSpent}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-2xl font-black text-text-primary"
+                    className="text-3xl font-black text-text-primary tracking-tight"
                   >
                     {formatCurrency(totalFilteredSpent)}
                   </motion.p>
-                  <p className="text-[10px] text-text-muted mt-1 font-medium">
-                    {filteredExpenses.length} transaction{filteredExpenses.length !== 1 ? 's' : ''}
-                    {selectedCategory !== 'all' && ` in ${(categories || []).find(c => c.id === selectedCategory)?.name || 'category'}`}
-                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 border border-white/10 text-text-secondary">
+                      {filteredExpenses.length} {filteredExpenses.length === 1 ? 'record' : 'records'}
+                    </span>
+                    {selectedCategory !== 'all' && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-green/10 text-accent-green border border-accent-green/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                        {(categories || []).find(c => c.id === selectedCategory)?.name || 'Category'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Timeline Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setShowTimelineDropdown(!showTimelineDropdown)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border text-sm text-text-primary hover:bg-card-hover transition-colors duration-150"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-surface/80 border border-white/10 text-xs font-bold text-text-primary hover:border-accent-green/40 hover:bg-surface transition-all duration-200 shadow-sm"
                   >
-                    <span className="text-xs font-bold">{timelineFilter}</span>
+                    <span>{timelineFilter}</span>
                     <svg
-                      className={`w-3 h-3 text-text-secondary transition-transform duration-200 ${showTimelineDropdown ? 'rotate-180' : ''}`}
+                      className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${showTimelineDropdown ? 'rotate-180 text-accent-green' : ''}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   <AnimatePresence>
@@ -190,7 +202,7 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-full mt-2 z-50 min-w-[140px] rounded-xl bg-card border border-border shadow-dropdown overflow-hidden"
+                        className="absolute right-0 top-full mt-2 z-50 min-w-[150px] rounded-2xl bg-card border border-white/10 shadow-2xl overflow-hidden p-1 backdrop-blur-xl"
                       >
                         {getDynamicFilterOptions().map((opt) => (
                           <button
@@ -199,10 +211,10 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
                               setTimelineFilter(opt);
                               setShowTimelineDropdown(false);
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors duration-100 ${
+                            className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
                               timelineFilter === opt
-                                ? 'text-accent-green bg-accent-green/10'
-                                : 'text-text-primary hover:bg-white/5'
+                                ? 'text-primary bg-accent-green shadow-sm'
+                                : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                             }`}
                           >
                             {opt}
@@ -219,49 +231,77 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
             <div className="flex gap-2 px-5 overflow-x-auto no-scrollbar pb-1">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${
                   selectedCategory === 'all'
-                    ? 'bg-accent-green border-accent-green text-primary'
-                    : 'bg-card border-border text-text-muted'
+                    ? 'bg-accent-green border-accent-green text-primary shadow-sm'
+                    : 'bg-card/70 border-white/5 text-text-muted hover:border-white/10 hover:text-text-secondary'
                 }`}
               >
                 All
               </button>
-              {(categories || []).map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                    selectedCategory === cat.id
-                      ? 'border-accent-green text-accent-green bg-accent-green/10'
-                      : 'bg-card border-border text-text-muted'
-                  }`}
-                >
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  {cat.name}
-                </button>
-              ))}
+              {(categories || []).map(cat => {
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${
+                      isSelected
+                        ? 'border-accent-green text-accent-green bg-accent-green/10 shadow-sm'
+                        : 'bg-card/70 border-white/5 text-text-muted hover:border-white/10 hover:text-text-secondary'
+                    }`}
+                  >
+                    <div
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{
+                        backgroundColor: cat.color,
+                        boxShadow: isSelected ? `0 0 6px ${cat.color}` : 'none',
+                      }}
+                    />
+                    {cat.name}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* List */}
-            <div className="px-5 pb-4 space-y-4">
+            {/* Redesigned List Feed */}
+            <div className="px-5 pb-6 space-y-4">
               {(dailyTotalsList || []).map(({ date, amount }) => (
-                <div key={date.toDateString()} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                      {date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </h3>
-                    <span className="text-sm font-bold text-text-primary">{formatCurrency(amount)}</span>
+                <div key={date.toDateString()} className="space-y-2.5">
+                  {/* Clean Sticky-style Date Header */}
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1 h-3.5 rounded-full bg-accent-green/80" />
+                      <h3 className="text-[11px] font-extrabold text-text-muted tracking-wider uppercase">
+                        {date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </h3>
+                    </div>
+                    <span className="text-xs font-black text-text-primary px-2.5 py-0.5 rounded-full bg-surface/60 border border-white/5">
+                      {formatCurrency(amount)}
+                    </span>
                   </div>
-                  <div className="glass rounded-card p-3 space-y-1">
+
+                  {/* Clean Day Container */}
+                  <div className="p-3 rounded-2xl bg-card/80 border border-white/5 shadow-card space-y-1 backdrop-blur-sm">
                     {(filteredExpenses || []).filter(e => new Date(e?.createdAt || 0).toDateString() === date.toDateString()).map(exp => (
                       <ExpenseItem key={exp.id} expense={exp} />
                     ))}
                   </div>
                 </div>
               ))}
+
               {dailyTotalsList.length === 0 && (
-                <p className="text-sm text-text-muted text-center py-20 italic">No history available</p>
+                <div className="text-center py-16 px-6 rounded-3xl bg-surface/30 border border-dashed border-border mt-4">
+                  <div className="w-12 h-12 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-3 text-text-muted">
+                    <HiListBullet className="w-6 h-6 text-text-muted/60" />
+                  </div>
+                  <p className="text-sm font-bold text-text-primary mb-1">No Transactions Found</p>
+                  <p className="text-xs text-text-muted">
+                    {selectedCategory !== 'all' || timelineFilter !== 'Overall'
+                      ? 'Try adjusting your category or timeline filter.'
+                      : 'Add your first expense to see your history here.'}
+                  </p>
+                </div>
               )}
             </div>
           </div>

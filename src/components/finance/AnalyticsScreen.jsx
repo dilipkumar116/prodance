@@ -1,44 +1,56 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { HiArrowLeft, HiArrowUp, HiArrowDown, HiTrendingUp } from '../../utils/icons';
-import useFinanceStore, { getCategoryTotals, getWeeklyTrend } from '../../stores/useFinanceStore';
-import { formatCurrency } from '../../utils/helpers';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  HiArrowLeft,
+  HiTrendingUp,
+  HiLightningBolt,
+  HiArrowUp,
+  HiCalendar,
+  HiChartBar,
+} from '../../utils/icons';
+import useFinanceStore, { getDetailedAnalytics } from '../../stores/useFinanceStore';
+import { formatCurrency, formatTimeAgo } from '../../utils/helpers';
+import { getCategoryIcon } from '../../utils/categories';
 
 export default function AnalyticsScreen({ onClose, inline = false }) {
   const expenses = useFinanceStore((s) => s.expenses);
   const categories = useFinanceStore((s) => s.categories);
+  const [period, setPeriod] = useState('This Month');
 
-  const categoryTotals = useMemo(() => {
-    return getCategoryTotals(categories, expenses).sort((a, b) => b.total - a.total);
-  }, [categories, expenses]);
+  const periodOptions = ['This Month', 'This Week', 'Last Month', 'Overall'];
 
-  const weeklyTrend = useMemo(() => getWeeklyTrend(expenses).reverse(), [expenses]);
+  // Compute rich analytics for the selected period
+  const analytics = useMemo(() => {
+    return getDetailedAnalytics(expenses, categories, period);
+  }, [expenses, categories, period]);
 
-  const totalSpent = useMemo(() => categoryTotals.reduce((s, c) => s + (c.total || 0), 0), [categoryTotals]);
-  const highestExpense = categoryTotals[0];
+  const {
+    filteredExpenses,
+    total,
+    count,
+    dailyAverage,
+    highestExpense,
+    mostFrequentCategory,
+    peakDayOfWeek,
+    topExpenses,
+    categoryBreakdown,
+    trendBuckets,
+  } = analytics;
 
-  // Build SVG Sparkline path for the weekly trend
-  const sparklinePath = useMemo(() => {
-    if (weeklyTrend.length === 0) return '';
-    const maxTotal = Math.max(...weeklyTrend.map(d => d.total), 1); // avoid / 0
-    const points = weeklyTrend.map((d, i) => {
-      const x = (i / (weeklyTrend.length - 1)) * 100;
-      const y = 100 - ((d.total / maxTotal) * 80); // leave 20% padding at top
-      return `${x},${y}`;
+  // Build SVG trend sparkline path
+  const sparkline = useMemo(() => {
+    if (!trendBuckets || trendBuckets.length === 0) return { path: '', stroke: '', max: 1 };
+    const max = Math.max(...trendBuckets.map((d) => d.total), 1);
+    const len = trendBuckets.length;
+    const points = trendBuckets.map((d, i) => {
+      const x = len > 1 ? (i / (len - 1)) * 100 : 50;
+      const y = 92 - (d.total / max) * 72;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
     });
-    return `M0,100 L${points.join(' L')} L100,100 Z`;
-  }, [weeklyTrend]);
-
-  const sparklineStroke = useMemo(() => {
-    if (weeklyTrend.length === 0) return '';
-    const maxTotal = Math.max(...weeklyTrend.map(d => d.total), 1);
-    const points = weeklyTrend.map((d, i) => {
-      const x = (i / (weeklyTrend.length - 1)) * 100;
-      const y = 100 - ((d.total / maxTotal) * 80);
-      return `${x},${y}`;
-    });
-    return `M${points.join(' L')}`;
-  }, [weeklyTrend]);
+    const fillPath = `M0,100 L${points.join(' L')} L100,100 Z`;
+    const strokePath = `M${points.join(' L')}`;
+    return { fillPath, strokePath, max };
+  }, [trendBuckets]);
 
   return (
     <motion.div
@@ -46,95 +58,250 @@ export default function AnalyticsScreen({ onClose, inline = false }) {
       animate={inline ? { opacity: 1 } : { y: 0 }}
       exit={inline ? { opacity: 1 } : { y: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className={inline ? "flex flex-col h-full" : "fixed inset-0 z-[100] bg-primary flex flex-col"}
+      className={inline ? 'flex flex-col h-full' : 'fixed inset-0 z-[100] bg-primary flex flex-col'}
     >
       {!inline && (
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card">
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-2 -ml-2 rounded-xl hover:bg-white/5">
+            <button onClick={onClose} className="p-2 -ml-2 rounded-xl hover:bg-white/5 transition-colors">
               <HiArrowLeft className="w-6 h-6 text-text-primary" />
             </button>
-            <h2 className="text-lg font-bold text-text-primary">Advanced Analytics</h2>
+            <h2 className="text-lg font-bold text-text-primary">Financial Intelligence</h2>
           </div>
         </div>
       )}
 
-      <div className={`flex-1 ${!inline ? 'overflow-y-auto p-5 no-scrollbar pb-24' : ''} space-y-6 mt-2`}>
+      <div className={`flex-1 ${!inline ? 'overflow-y-auto p-5 no-scrollbar pb-24' : ''} space-y-5 mt-2`}>
         
-        {/* Weekly Trend Sparkline */}
-        <div className="bg-card border border-border p-5 rounded-card relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Weekly Spending Trend</h3>
-            <HiTrendingUp className="w-4 h-4 text-accent-green" />
-          </div>
+        {/* Period Selector Tabs */}
+        <div className="flex items-center p-1 rounded-2xl bg-surface/70 border border-border gap-1">
+          {periodOptions.map((opt) => {
+            const isActive = period === opt;
+            return (
+              <button
+                key={opt}
+                onClick={() => setPeriod(opt)}
+                className={`relative flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-200 z-10 ${
+                  isActive ? 'text-primary' : 'text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activePeriodTab"
+                    className="absolute inset-0 bg-accent-green rounded-xl shadow-md -z-10"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Hero Period Summary Banner */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-card via-surface/60 to-surface/30 border border-white/5 shadow-card relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-accent-green/10 blur-3xl rounded-full pointer-events-none" />
           
-          <div className="h-[120px] relative w-full mt-2">
+          <div className="flex items-start justify-between relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                  Total Spending • {period}
+                </p>
+              </div>
+              <motion.h2
+                key={`total-${total}`}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-3xl font-black text-text-primary tracking-tight"
+              >
+                {formatCurrency(total)}
+              </motion.h2>
+            </div>
+
+            <div className="text-right">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-accent-green/10 text-accent-green border border-accent-green/20">
+                {count} {count === 1 ? 'transaction' : 'transactions'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4-Card Intelligence Metric Matrix */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Daily Burn Rate */}
+          <div className="p-4 rounded-2xl bg-card border border-border relative overflow-hidden group hover:border-accent-green/30 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Daily Burn Rate</span>
+              <div className="p-1.5 rounded-lg bg-accent-green/10 text-accent-green">
+                <HiLightningBolt className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-lg font-black text-text-primary">
+              {formatCurrency(dailyAverage)}
+            </p>
+            <p className="text-[10px] text-text-muted mt-0.5 font-medium">Avg per day</p>
+          </div>
+
+          {/* Peak Single Expense */}
+          <div className="p-4 rounded-2xl bg-card border border-border relative overflow-hidden group hover:border-accent-red/30 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Peak Expense</span>
+              <div className="p-1.5 rounded-lg bg-accent-red/10 text-accent-red">
+                <HiArrowUp className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-lg font-black text-text-primary truncate">
+              {highestExpense ? formatCurrency(highestExpense.amount) : '₹0'}
+            </p>
+            <p className="text-[10px] text-text-muted mt-0.5 font-medium truncate">
+              {highestExpense ? highestExpense.title : 'None recorded'}
+            </p>
+          </div>
+
+          {/* Peak Day of Week */}
+          <div className="p-4 rounded-2xl bg-card border border-border relative overflow-hidden group hover:border-accent-blue/30 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Peak Day</span>
+              <div className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue">
+                <HiCalendar className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-lg font-black text-text-primary">
+              {peakDayOfWeek ? peakDayOfWeek.name : 'N/A'}
+            </p>
+            <p className="text-[10px] text-text-muted mt-0.5 font-medium">
+              {peakDayOfWeek ? `${peakDayOfWeek.percentage}% of period` : 'No data'}
+            </p>
+          </div>
+
+          {/* Most Frequent Category */}
+          <div className="p-4 rounded-2xl bg-card border border-border relative overflow-hidden group hover:border-accent-gold/30 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Top Frequency</span>
+              <div className="p-1.5 rounded-lg bg-accent-gold/10 text-accent-gold">
+                <HiChartBar className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-lg font-black text-text-primary truncate">
+              {mostFrequentCategory ? mostFrequentCategory.name : 'N/A'}
+            </p>
+            <p className="text-[10px] text-text-muted mt-0.5 font-medium">
+              {mostFrequentCategory ? `${mostFrequentCategory.count} times` : 'No data'}
+            </p>
+          </div>
+        </div>
+
+        {/* Velocity / Spending Trend Graph */}
+        <div className="p-5 rounded-3xl bg-card border border-border relative overflow-hidden">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <div>
+              <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Spending Velocity</h3>
+              <p className="text-[10px] text-text-muted mt-0.5">7-Day Outflow Pattern</p>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-green/10 text-accent-green text-[10px] font-bold">
+              <HiTrendingUp className="w-3.5 h-3.5" />
+              Active
+            </div>
+          </div>
+
+          <div className="h-[120px] relative w-full mt-4">
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
               <defs>
-                <linearGradient id="financeSparkGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                <linearGradient id="analyticsSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
-              <motion.path 
+              <motion.path
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1 }}
-                d={sparklinePath} fill="url(#financeSparkGradient)" 
+                transition={{ duration: 0.8 }}
+                d={sparkline.fillPath}
+                fill="url(#analyticsSparkGrad)"
               />
-              <motion.path 
+              <motion.path
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
-                d={sparklineStroke} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" 
+                transition={{ duration: 1.2, ease: 'easeInOut' }}
+                d={sparkline.strokePath}
+                fill="none"
+                stroke="#4ADE80"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
               />
-              {/* Dot for today */}
-              {weeklyTrend.length > 0 && (
-                <motion.circle 
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 1.5 }}
-                  cx="100" 
-                  cy={100 - ((weeklyTrend[weeklyTrend.length - 1].total / Math.max(...weeklyTrend.map(d => d.total), 1)) * 80)} 
-                  r="3.5" 
-                  fill="#10B981" 
-                  className="shadow-[0_0_10px_rgba(16,185,129,0.8)]" 
-                />
-              )}
             </svg>
-            <div className="absolute inset-0 flex justify-between items-end pb-0 px-0 translate-y-6">
-              {weeklyTrend.map((d, i) => (
-                <span key={i} className="text-[8px] font-bold text-text-muted uppercase">{d.date.charAt(0)}</span>
+            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
+              {(trendBuckets || []).map((d, i) => (
+                <div key={i} className="text-center">
+                  <span className="text-[9px] font-bold text-text-muted uppercase block">{d.date}</span>
+                  <span className="text-[8px] font-semibold text-text-muted/70 block mt-0.5">
+                    {d.total > 0 ? `₹${d.total >= 1000 ? `${(d.total / 1000).toFixed(0)}k` : d.total}` : '0'}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Category Horizontal Bar Chart */}
-        <div className="bg-card border border-border p-5 rounded-card">
-          <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-4">Spending by Category</h3>
-          
-          <div className="space-y-4">
-            {categoryTotals.length === 0 ? (
-              <p className="text-xs text-text-muted text-center py-4">No data available.</p>
+        {/* Category Breakdown Details */}
+        <div className="p-5 rounded-3xl bg-card border border-border space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">
+              Category Distribution
+            </h3>
+            <span className="text-[10px] font-bold text-text-muted">
+              {categoryBreakdown.length} Categories Active
+            </span>
+          </div>
+
+          <div className="space-y-3.5">
+            {categoryBreakdown.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-xs text-text-muted italic">No expenses in this period.</p>
+              </div>
             ) : (
-              categoryTotals.map((cat, idx) => {
-                const percentage = Math.max(0.5, (cat.total / totalSpent) * 100);
+              categoryBreakdown.map((cat, idx) => {
+                const CatIcon = getCategoryIcon(cat.icon);
                 return (
-                  <div key={idx} className="w-full">
-                    <div className="flex justify-between items-end mb-1.5">
-                      <span className="text-xs font-bold text-text-primary">{cat.name}</span>
-                      <span className="text-[10px] font-medium text-text-muted">{formatCurrency(cat.total)}</span>
+                  <div key={cat.id || idx} className="space-y-1.5 group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${cat.color}20` }}
+                        >
+                          <CatIcon className="w-3.5 h-3.5" style={{ color: cat.color }} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-text-primary group-hover:text-accent-green transition-colors">
+                            {cat.name}
+                          </p>
+                          <p className="text-[10px] text-text-muted font-medium">
+                            {cat.count} txns • Avg {formatCurrency(cat.avgPerTx)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xs font-black text-text-primary">{formatCurrency(cat.total)}</p>
+                        <p className="text-[10px] font-bold" style={{ color: cat.color }}>
+                          {cat.percentage}%
+                        </p>
+                      </div>
                     </div>
-                    <div className="w-full h-2.5 bg-surface rounded-full overflow-hidden">
-                      <motion.div 
+
+                    <div className="w-full h-2 bg-surface rounded-full overflow-hidden">
+                      <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ duration: 1, ease: "easeOut", delay: idx * 0.1 }}
+                        animate={{ width: `${Math.max(2, cat.percentage)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.05 }}
                         className="h-full rounded-full relative"
                         style={{ backgroundColor: cat.color }}
                       >
-                        <div className="absolute inset-0 bg-white/20 w-1/2 rounded-full" />
+                        <div className="absolute inset-0 bg-white/25 w-1/3 rounded-full" />
                       </motion.div>
                     </div>
                   </div>
@@ -144,32 +311,55 @@ export default function AnalyticsScreen({ onClose, inline = false }) {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card border border-border p-4 rounded-card relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-accent-green/10 blur-xl rounded-full -mr-4 -mt-4" />
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-accent-green/10 text-accent-green">
-                <HiArrowUp className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-bold text-text-muted uppercase">Peak Category</span>
+        {/* Top 5 Major Outflows */}
+        {topExpenses.length > 0 && (
+          <div className="p-5 rounded-3xl bg-card border border-border space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">
+                Major Purchases
+              </h3>
+              <span className="text-[10px] font-bold text-text-muted">Top {topExpenses.length}</span>
             </div>
-            <p className="text-sm font-bold text-text-primary truncate mt-2">{highestExpense?.name || 'N/A'}</p>
-            <p className="text-xs font-bold text-text-muted">{formatCurrency(highestExpense?.total || 0)}</p>
-          </div>
-          
-          <div className="bg-card border border-border p-4 rounded-card relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-accent-blue/10 blur-xl rounded-full -mr-4 -mt-4" />
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue">
-                <HiArrowDown className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-bold text-text-muted uppercase">Transactions</span>
+
+            <div className="space-y-2">
+              {topExpenses.map((exp, i) => {
+                const cat = categories.find((c) => c.id === exp.category) || {
+                  name: 'Other',
+                  color: '#A0AAB2',
+                  icon: 'tag',
+                };
+                const CatIcon = getCategoryIcon(cat.icon);
+                return (
+                  <div
+                    key={exp.id || i}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-surface/40 border border-white/5 hover:border-white/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${cat.color}20` }}
+                      >
+                        <CatIcon className="w-4 h-4" style={{ color: cat.color }} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-text-primary truncate">{exp.title}</p>
+                        <p className="text-[10px] text-text-muted truncate">
+                          {cat.name} • {formatTimeAgo(exp.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0 pl-3">
+                      <span className="text-sm font-black text-text-primary">
+                        {formatCurrency(exp.amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-sm font-bold text-text-primary mt-2">{expenses.length}</p>
-            <p className="text-[10px] font-bold text-text-muted">Total recorded</p>
           </div>
-        </div>
+        )}
 
       </div>
     </motion.div>

@@ -20,7 +20,6 @@ export default function SettingsScreen() {
   const [dirPermission, setDirPermission] = useState('prompt');
   const [showCategories, setShowCategories] = useState(false);
   const [showBackupSettings, setShowBackupSettings] = useState(false);
-  const [smsPermStatus, setSmsPermStatus] = useState('');
 
   useEffect(() => {
     getStoredDirectoryHandle().then(async (handle) => {
@@ -179,66 +178,6 @@ export default function SettingsScreen() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-        </section>
-
-        {/* SMS Access */}
-        <section>
-          <div className="bg-surface p-4 rounded-btn border border-border">
-            <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-md bg-accent-blue/10 text-accent-blue flex items-center justify-center">📱</span>
-              SMS Access
-            </h3>
-            <p className="text-xs text-text-muted mb-4 leading-relaxed">
-              To import transactions, copy your bank SMS message(s) and paste them into the SMS tab, then tap Refresh.
-            </p>
-            
-            <div className="flex items-center justify-between">
-              <button
-                onClick={async () => {
-                  try {
-                    if (!navigator.permissions) throw new Error('API not available');
-                    const result = await navigator.permissions.query({ name: 'sms' });
-                    setSmsPermStatus(result.state);
-                    result.onchange = () => setSmsPermStatus(result.state);
-                  } catch {
-                    setSmsPermStatus('unavailable');
-                  }
-                }}
-                className="px-4 py-2 rounded-btn bg-accent-blue/10 border border-accent-blue/20 text-accent-blue font-bold text-xs hover:bg-accent-blue/20 transition-colors"
-              >
-                Request SMS Permission
-              </button>
-              
-              <div className="flex items-center">
-                {(!smsPermStatus || smsPermStatus === 'prompt') && (
-                  <span className="flex items-center gap-1 text-[10px] text-text-muted font-bold px-2.5 py-1 rounded-full bg-surface border border-border">
-                    <span className="w-1.5 h-1.5 rounded-full bg-text-muted"></span> Not Requested
-                  </span>
-                )}
-                {smsPermStatus === 'granted' && (
-                  <span className="flex items-center gap-1 text-[10px] text-accent-green font-bold px-2.5 py-1 rounded-full bg-accent-green/10 border border-accent-green/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-green"></span> Granted
-                  </span>
-                )}
-                {smsPermStatus === 'denied' && (
-                  <span className="flex items-center gap-1 text-[10px] text-accent-red font-bold px-2.5 py-1 rounded-full bg-accent-red/10 border border-accent-red/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-red"></span> Denied
-                  </span>
-                )}
-                {smsPermStatus === 'unavailable' && (
-                  <span className="flex items-center gap-1 text-[10px] text-accent-blue font-bold px-2.5 py-1 rounded-full bg-accent-blue/10 border border-accent-blue/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-blue"></span> Unavailable
-                  </span>
-                )}
-              </div>
-            </div>
-            {smsPermStatus === 'denied' && (
-              <p className="text-[10px] text-accent-red mt-2">SMS permission denied. Paste SMS manually.</p>
-            )}
-            {smsPermStatus === 'unavailable' && (
-              <p className="text-[10px] text-text-muted mt-2">API not supported. Paste SMS manually.</p>
-            )}
           </div>
         </section>
 
