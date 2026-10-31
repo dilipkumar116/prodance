@@ -26,16 +26,16 @@ const lazyWithRetry = (componentImport) =>
 
 const FinanceScreen = lazyWithRetry(() => import('./components/finance/FinanceScreen'));
 const SettingsScreen = lazyWithRetry(() => import('./components/SettingsScreen'));
-const ProductivityScreen = lazyWithRetry(() => import('./components/productivity/ProductivityScreen'));
+const SMSScreen = lazyWithRetry(() => import('./components/sms/SMSScreen'));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('finance');
   const [financeResetKey, setFinanceResetKey] = useState(0);
-  const [productivityResetKey, setProductivityResetKey] = useState(0);
+  const [smsResetKey, setSmsResetKey] = useState(0);
 
   useEffect(() => {
     const preloadOtherScreens = () => {
-      import('./components/productivity/ProductivityScreen').catch(() => {});
+      import('./components/sms/SMSScreen').catch(() => {});
       import('./components/SettingsScreen').catch(() => {});
     };
 
@@ -53,7 +53,7 @@ export default function App() {
   const handleTabChange = (tabId) => {
     if (activeTab === tabId) {
       if (tabId === 'finance') setFinanceResetKey((k) => k + 1);
-      if (tabId === 'productivity') setProductivityResetKey((k) => k + 1);
+      if (tabId === 'sms') setSmsResetKey((k) => k + 1);
     }
     setActiveTab(tabId);
   };
@@ -73,10 +73,10 @@ export default function App() {
                   </ErrorBoundary>
                 </motion.div>
               )}
-              {activeTab === 'productivity' && (
-                <motion.div key={`productivity-${productivityResetKey}`} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">
+              {activeTab === 'sms' && (
+                <motion.div key={`sms-${smsResetKey}`} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="h-full">
                   <ErrorBoundary>
-                    <ProductivityScreen setActiveTab={setActiveTab} />
+                    <SMSScreen />
                   </ErrorBoundary>
                 </motion.div>
               )}

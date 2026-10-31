@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
-import { HiRupee, HiChartBar, HiCog } from '../utils/icons';
+import { HiRupee, HiChat, HiCog } from '../utils/icons';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'finance', label: 'Finance', icon: HiRupee },
-    { id: 'productivity', label: 'Productivity - Tracker', icon: HiChartBar },
+    { id: 'sms', label: 'SMS', icon: HiChat },
     { id: 'settings', label: 'Settings', icon: HiCog },
   ];
 
