@@ -211,29 +211,61 @@ export function getTotalSpent(filteredExpenses = []) {
   return filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 }
 
-export function getWeeklyTrend(expenses = []) {
-  const last7Days = [...Array(7)].map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }).reverse();
+export function getWeeklyTrend(expenses = [], filter = 'This Month') {
+  const { start } = getFilterDateRange(filter);
 
-  return last7Days.map((date) => {
-    const dayTotal = expenses
+  if (filter === 'This Week') {
+    const days = [];
+    const cur = new Date(start);
+    for (let i = 0; i < 7; i++) {
+      days.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return days.map((date) => {
+      const dayTotal = (expenses || [])
+        .filter((exp) => {
+          const expDate = new Date(exp.createdAt);
+          return (
+            expDate.getDate() === date.getDate() &&
+            expDate.getMonth() === date.getMonth() &&
+            expDate.getFullYear() === date.getFullYear()
+          );
+        })
+        .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+      return {
+        date: date.toLocaleDateString(undefined, { weekday: 'short' }),
+        total: dayTotal,
+      };
+    });
+  }
+
+  // Monthly breakdown: 4 standard week periods
+  const month = start.getMonth();
+  const year = start.getFullYear();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const periods = [
+    { label: 'W1', startDay: 1, endDay: 7 },
+    { label: 'W2', startDay: 8, endDay: 14 },
+    { label: 'W3', startDay: 15, endDay: 21 },
+    { label: 'W4', startDay: 22, endDay: daysInMonth },
+  ];
+
+  return periods.map((p) => {
+    const total = (expenses || [])
       .filter((exp) => {
-        const expDate = new Date(exp.createdAt);
-        return (
-          expDate.getDate() === date.getDate() &&
-          expDate.getMonth() === date.getMonth() &&
-          expDate.getFullYear() === date.getFullYear()
-        );
+        const d = new Date(exp.createdAt);
+        if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+        const day = d.getDate();
+        return day >= p.startDay && day <= p.endDay;
       })
       .reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
     return {
-      date: date.toLocaleDateString(undefined, { weekday: 'short' }),
-      total: dayTotal,
+      date: p.label,
+      total,
     };
   });
 }
@@ -321,8 +353,8 @@ export function getDetailedAnalytics(expenses = [], categories = [], filter = 'T
     }))
     .sort((a, b) => b.total - a.total);
 
-  // Sparkline/trend data (last 7 or 14 buckets depending on filter)
-  const trendBuckets = getWeeklyTrend(currentList.length > 0 ? currentList : expenses);
+  // Sparkline/trend data for the selected period
+  const trendBuckets = getWeeklyTrend(currentList, filter);
 
   return {
     filteredExpenses: currentList,

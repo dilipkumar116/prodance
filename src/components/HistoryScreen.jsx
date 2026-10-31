@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiArrowLeft, HiCalendar, HiListBullet, HiChevronLeft, HiChevronRight, HiPlus, HiX } from '../utils/icons';
 import useFinanceStore, { getFilteredExpenses, getTotalSpent } from '../stores/useFinanceStore';
@@ -17,6 +17,22 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
   const [timelineFilter, setTimelineFilter] = useState('This Month');
   const [showTimelineDropdown, setShowTimelineDropdown] = useState(false);
   const [showMonthSummary, setShowMonthSummary] = useState(false);
+  const timelineDropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!showTimelineDropdown) return;
+    const handleClickOutside = (e) => {
+      if (timelineDropdownRef.current && !timelineDropdownRef.current.contains(e.target)) {
+        setShowTimelineDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showTimelineDropdown]);
 
   // Sync viewMode with parent prop if it changes
   useState(() => {
@@ -148,9 +164,11 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
         {(inline ? initialView : viewMode) === 'list' ? (
           <div className="space-y-4">
             {/* Timeline Filter & Total Spent Hero Banner */}
-            <div className="mx-5 mt-4 p-5 rounded-3xl bg-gradient-to-br from-card via-surface/60 to-surface/30 border border-white/10 shadow-card relative overflow-hidden group">
+            <div className="mx-5 mt-4 p-5 rounded-3xl bg-gradient-to-br from-card via-surface/60 to-surface/30 border border-white/10 shadow-card relative z-20 group">
               {/* Decorative ambient aura */}
-              <div className="absolute -top-10 -right-10 w-28 h-28 bg-accent-green/15 blur-2xl rounded-full pointer-events-none group-hover:bg-accent-green/20 transition-all duration-300" />
+              <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                <div className="absolute -top-10 -right-10 w-28 h-28 bg-accent-green/15 blur-2xl rounded-full group-hover:bg-accent-green/20 transition-all duration-300" />
+              </div>
               
               <div className="flex items-start justify-between relative z-10">
                 <div className="space-y-1">
@@ -182,7 +200,7 @@ export default function HistoryScreen({ onClose, inline = false, initialView = '
                 </div>
 
                 {/* Timeline Dropdown */}
-                <div className="relative">
+                <div ref={timelineDropdownRef} className="relative">
                   <button
                     onClick={() => setShowTimelineDropdown(!showTimelineDropdown)}
                     className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-surface/80 border border-white/10 text-xs font-bold text-text-primary hover:border-accent-green/40 hover:bg-surface transition-all duration-200 shadow-sm"

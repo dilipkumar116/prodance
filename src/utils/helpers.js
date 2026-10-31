@@ -128,7 +128,23 @@ export const getFilterDateRange = (filter) => {
     return { start: new Date(0), end: now };
   }
 
-  // Parse month string e.g. "April 2026"
+  // Parse month string e.g. "April 2026" or "Apr 2026"
+  const monthMatch = typeof filter === 'string' && filter.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (monthMatch) {
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    const shortMonthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const mStr = monthMatch[1].toLowerCase();
+    let mIdx = monthNames.indexOf(mStr);
+    if (mIdx === -1) mIdx = shortMonthNames.indexOf(mStr);
+    if (mIdx !== -1) {
+      const year = parseInt(monthMatch[2], 10);
+      const start = new Date(year, mIdx, 1, 0, 0, 0, 0);
+      const end = new Date(year, mIdx + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+  }
+
+  // Fallback date parsing
   const parsed = new Date(filter);
   if (!isNaN(parsed)) {
     const start = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
