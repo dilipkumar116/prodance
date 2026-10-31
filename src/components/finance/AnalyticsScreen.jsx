@@ -99,13 +99,14 @@ export default function AnalyticsScreen({ onClose, inline = false }) {
   // Transactions for selected category drilldown
   const drilldownTransactions = useMemo(() => {
     if (!selectedCategoryDrilldown) return [];
+    const targetId = selectedCategoryDrilldown.id;
     return (filteredExpenses || [])
       .filter((e) => {
         const catId = e.category || e.categoryId;
-        if (selectedCategoryDrilldown.id === 'others') {
-          return !categories.some((c) => c.id === catId);
+        if (targetId === 'others' || targetId === 'other') {
+          return catId === 'others' || catId === 'other' || !catId || !categories.some((c) => c.id === catId);
         }
-        return catId === selectedCategoryDrilldown.id;
+        return catId === targetId;
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [selectedCategoryDrilldown, filteredExpenses, categories]);
